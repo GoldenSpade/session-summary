@@ -9,6 +9,46 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
+// Функція для парсінгу структури конспекту
+function parseSessionSummary(summary) {
+  const sections = {
+    topics: [],
+    insights: [],
+    actions: []
+  }
+
+  const lines = summary.split('\n').map(line => line.trim()).filter(line => line)
+  let currentSection = null
+
+  for (const line of lines) {
+    // Пропускаємо заголовок та дату
+    if (line.includes('Конспект психологічної сесії') ||
+        (line.includes('Дата:') && line.includes('Клієнт:'))) {
+      continue
+    }
+
+    // Визначаємо секцію
+    if (line.toLowerCase().includes('основні теми')) {
+      currentSection = 'topics'
+      continue
+    } else if (line.toLowerCase().includes('ключові інсайти')) {
+      currentSection = 'insights'
+      continue
+    } else if (line.toLowerCase().includes('план дій')) {
+      currentSection = 'actions'
+      continue
+    }
+
+    // Додаємо контент до відповідної секції
+    if (currentSection && line.startsWith('•')) {
+      const content = line.substring(1).trim()
+      sections[currentSection].push(content)
+    }
+  }
+
+  return sections
+}
+
 // Endpoint для генерації PDF з конспекту
 router.post('/generate-pdf', async (req, res) => {
   try {
@@ -31,19 +71,17 @@ router.post('/generate-pdf', async (req, res) => {
     doc.pipe(res)
 
     // Додаємо фон
-    const backgroundPath = path.join(__dirname, '../../Archive/background_maia.png')
+    const backgroundPath = path.join(__dirname, '../../public/background.jpg')
     if (fs.existsSync(backgroundPath)) {
       doc.image(backgroundPath, 0, 0, {
         width: 595.28,
-        height: 841.89,
-        align: 'center',
-        valign: 'center'
+        height: 841.89
       })
     }
 
     // Регістрація кастомних шрифтів Montserrat
-    const fontRegularPath = path.join(__dirname, '../../Archive/Montserrat-Regular.ttf')
-    const fontBoldPath = path.join(__dirname, '../../Archive/Montserrat-Bold.ttf')
+    const fontRegularPath = path.join(__dirname, '../assets/fonts/Montserrat-Regular.ttf')
+    const fontBoldPath = path.join(__dirname, '../assets/fonts/Montserrat-Bold.ttf')
 
     if (fs.existsSync(fontRegularPath)) {
       doc.registerFont('Montserrat', fontRegularPath)
@@ -52,83 +90,85 @@ router.post('/generate-pdf', async (req, res) => {
       doc.registerFont('Montserrat-Bold', fontBoldPath)
     }
 
-    // Починаємо з контенту
+    // Починаємо з контенту - заголовок
     doc.font('Montserrat-Bold')
-       .fontSize(20)
-       .text('Конспект психологічної сесії', 50, 50, { align: 'center' })
+       .fontSize(22)
+       .fillColor('#4A4A4A')
+       .text('Конспект психологічної сесії', 80, 140, { align: 'center', width: 435 })
 
     // Підзаголовок з датою та клієнтом
     doc.font('Montserrat')
-       .fontSize(10)
+       .fontSize(11)
+       .fillColor('#666')
        .text(`Дата: ${date || new Date().toLocaleDateString('uk-UA')} | Клієнт: ${client || 'Не вказано'}`,
-             50, 80, { align: 'center' })
+             80, 170, { align: 'center', width: 435 })
 
-    // Основний текст конспекту
-    let currentY = 120
-    const lines = summary.split('\n').filter(line => line.trim())
+    // Парсінг структури конспекту
+    let currentY = 210
+    const sections = parseSessionSummary(summary)
 
-    for (let line of lines) {
-      line = line.trim()
+    // Основні теми
+    if (sections.topics && sections.topics.length > 0) {
+      doc.font('Montserrat-Bold')
+         .fontSize(14)
+         .fillColor('#4A4A4A')
+         .text('Основні теми', 120, currentY)
+      currentY += 20
 
-      // Пропускаємо заголовок та дату якщо вони вже додані
-      if (line.includes('Конспект психологічної сесії') ||
-          (line.includes('Дата:') && line.includes('Клієнт:'))) {
-        continue
-      }
-
-      // Визначаємо тип рядка
-      if (line.startsWith('**') && line.endsWith('**')) {
-        // Заголовок секції
-        doc.font('Montserrat-Bold')
-           .fontSize(14)
-           .text(line.replace(/\*\*/g, ''), 50, currentY)
-        currentY = doc.y + 10
-      } else if (line.startsWith('•') || line.startsWith('-') || /^\d+\./.test(line)) {
-        // Елемент списку
-        let item = line.replace(/^[•\-]\s*/, '• ')
-                      .replace(/^\d+\.\s*/, '')
-
-        // Обробляємо жирний текст у форматі **текст**
-        const parts = item.split(/\*\*/)
-        doc.font('Montserrat').fontSize(11)
-
-        let x = 70
-        for (let i = 0; i < parts.length; i++) {
-          if (i % 2 === 1) {
-            // Жирний текст
-            doc.font('Montserrat-Bold')
-          } else {
-            // Звичайний текст
-            doc.font('Montserrat')
-          }
-
-          if (i === 0 && parts[i].startsWith('• ')) {
-            doc.text('• ', 60, currentY, { continued: true })
-            doc.text(parts[i].substring(2), { continued: i < parts.length - 1 })
-          } else {
-            doc.text(parts[i], { continued: i < parts.length - 1 })
-          }
-        }
-
-        currentY = doc.y + 5
-      }
-
-      // Перевірка чи потрібна нова сторінка
-      if (currentY > 700) {
-        doc.addPage()
-        currentY = 50
-
-        // Додаємо фон на нову сторінку
-        if (fs.existsSync(backgroundPath)) {
-          doc.image(backgroundPath, 0, 0, {
-            width: 595.28,
-            height: 841.89,
-            align: 'center',
-            valign: 'center'
-          })
-        }
-      }
+      sections.topics.forEach(topic => {
+        doc.font('Montserrat')
+           .fontSize(11)
+           .fillColor('#333')
+           .text('• ' + topic, 130, currentY, { width: 345, lineGap: 3 })
+        currentY = doc.y + 8
+      })
+      currentY += 10
     }
+
+    // Ключові інсайти
+    if (sections.insights && sections.insights.length > 0) {
+      doc.font('Montserrat-Bold')
+         .fontSize(14)
+         .fillColor('#4A4A4A')
+         .text('Ключові інсайти', 120, currentY)
+      currentY += 20
+
+      sections.insights.forEach(insight => {
+        doc.font('Montserrat')
+           .fontSize(11)
+           .fillColor('#333')
+           .text('• ' + insight, 130, currentY, { width: 345, lineGap: 3 })
+        currentY = doc.y + 8
+      })
+      currentY += 10
+    }
+
+    // План дій
+    if (sections.actions && sections.actions.length > 0) {
+      doc.font('Montserrat-Bold')
+         .fontSize(14)
+         .fillColor('#4A4A4A')
+         .text('План дій', 120, currentY)
+      currentY += 20
+
+      sections.actions.forEach(action => {
+        // Розбиваємо дію на жирну частину та звичайну
+        const colonIndex = action.indexOf(':')
+        if (colonIndex > 0) {
+          const boldPart = action.substring(0, colonIndex)
+          const regularPart = action.substring(colonIndex)
+
+          doc.text('• ', 130, currentY, { continued: true })
+          doc.font('Montserrat-Bold').text(boldPart, { continued: true })
+          doc.font('Montserrat').text(regularPart, { width: 335, lineGap: 3 })
+        } else {
+          doc.font('Montserrat').text('• ' + action, 130, currentY, { width: 345, lineGap: 3 })
+        }
+        currentY = doc.y + 8
+      })
+    }
+
+    // Підпис вже є на фоновому зображенні, тому не додаємо
 
     // Завершуємо документ
     doc.end()
