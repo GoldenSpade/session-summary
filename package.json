@@ -1,0 +1,34 @@
+{
+  "name": "summary-of-a-psychological-session",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "20.18.2",
+    "npm": "10.8.2"
+  },
+  "scripts": {
+    "server": "node ./backend/server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.7",
+    "bootstrap-icons": "^1.13.1",
+    "vue": "^3.5.17",
+    "axios": "^1.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.1.0",
+    "express": "^5.1.0",
+    "openai": "^5.20.3",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "@types/long": "^5.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "vite": "^7.0.0",
+    "vite-plugin-remove-console": "^2.2.0",
+    "vite-plugin-vue-devtools": "^7.7.7"
+  }
+}
