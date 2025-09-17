@@ -5,6 +5,10 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const router = express.Router()
+
+console.log('OpenAI API Key loaded:', process.env.OPENAI_API_KEY ? 'Yes' : 'No')
+console.log('API Key first 10 chars:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...')
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
