@@ -61,7 +61,7 @@ router.post('/generate-pdf', async (req, res) => {
     // Створюємо PDF документ
     const doc = new PDFDocument({
       size: 'A4',
-      margin: 50,
+      margin: 40,
       bufferPages: true
     })
 
@@ -93,78 +93,85 @@ router.post('/generate-pdf', async (req, res) => {
     // Починаємо з контенту - заголовок
     doc.font('Montserrat-Bold')
        .fontSize(22)
-       .fillColor('#4A4A4A')
-       .text('Конспект психологічної сесії', 80, 140, { align: 'center', width: 435 })
+       .fillColor('#3b155e')
+       .text('Конспект психологічної сесії', 80, 80, { align: 'center', width: 435 })
 
     // Підзаголовок з датою та клієнтом
     doc.font('Montserrat')
        .fontSize(11)
        .fillColor('#666')
        .text(`Дата: ${date || new Date().toLocaleDateString('uk-UA')} | Клієнт: ${client || 'Не вказано'}`,
-             80, 170, { align: 'center', width: 435 })
+             80, 110, { align: 'center', width: 435 })
 
     // Парсінг структури конспекту
-    let currentY = 210
+    let currentY = 150
     const sections = parseSessionSummary(summary)
 
     // Основні теми
     if (sections.topics && sections.topics.length > 0) {
       doc.font('Montserrat-Bold')
          .fontSize(14)
-         .fillColor('#4A4A4A')
+         .fillColor('#4b2384')
          .text('Основні теми', 120, currentY)
       currentY += 20
 
       sections.topics.forEach(topic => {
+        // Видаляємо подвійні зірочки
+        const cleanTopic = topic.replace(/\*\*(.*?)\*\*/g, '$1')
         doc.font('Montserrat')
-           .fontSize(11)
+           .fontSize(10)
            .fillColor('#333')
-           .text('• ' + topic, 130, currentY, { width: 345, lineGap: 3 })
-        currentY = doc.y + 8
+           .text('• ' + cleanTopic, 130, currentY, { width: 345, lineGap: 2 })
+        currentY = doc.y + 6
       })
-      currentY += 10
+      currentY += 8
     }
 
     // Ключові інсайти
     if (sections.insights && sections.insights.length > 0) {
       doc.font('Montserrat-Bold')
          .fontSize(14)
-         .fillColor('#4A4A4A')
+         .fillColor('#4b2384')
          .text('Ключові інсайти', 120, currentY)
       currentY += 20
 
       sections.insights.forEach(insight => {
+        // Видаляємо подвійні зірочки
+        const cleanInsight = insight.replace(/\*\*(.*?)\*\*/g, '$1')
         doc.font('Montserrat')
-           .fontSize(11)
+           .fontSize(10)
            .fillColor('#333')
-           .text('• ' + insight, 130, currentY, { width: 345, lineGap: 3 })
-        currentY = doc.y + 8
+           .text('• ' + cleanInsight, 130, currentY, { width: 345, lineGap: 2 })
+        currentY = doc.y + 6
       })
-      currentY += 10
+      currentY += 8
     }
 
     // План дій
     if (sections.actions && sections.actions.length > 0) {
       doc.font('Montserrat-Bold')
          .fontSize(14)
-         .fillColor('#4A4A4A')
+         .fillColor('#4b2384')
          .text('План дій', 120, currentY)
       currentY += 20
 
       sections.actions.forEach(action => {
+        // Видаляємо подвійні зірочки з усього тексту
+        const cleanAction = action.replace(/\*\*(.*?)\*\*/g, '$1')
+
         // Розбиваємо дію на жирну частину та звичайну
-        const colonIndex = action.indexOf(':')
+        const colonIndex = cleanAction.indexOf(':')
         if (colonIndex > 0) {
-          const boldPart = action.substring(0, colonIndex)
-          const regularPart = action.substring(colonIndex)
+          const boldPart = cleanAction.substring(0, colonIndex)
+          const regularPart = cleanAction.substring(colonIndex)
 
           doc.text('• ', 130, currentY, { continued: true })
-          doc.font('Montserrat-Bold').text(boldPart, { continued: true })
-          doc.font('Montserrat').text(regularPart, { width: 335, lineGap: 3 })
+          doc.font('Montserrat-Bold').fontSize(10).text(boldPart, { continued: true })
+          doc.font('Montserrat').fontSize(10).text(regularPart, { width: 335, lineGap: 2 })
         } else {
-          doc.font('Montserrat').text('• ' + action, 130, currentY, { width: 345, lineGap: 3 })
+          doc.font('Montserrat').fontSize(10).text('• ' + cleanAction, 130, currentY, { width: 345, lineGap: 2 })
         }
-        currentY = doc.y + 8
+        currentY = doc.y + 6
       })
     }
 
