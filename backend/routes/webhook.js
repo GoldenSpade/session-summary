@@ -65,13 +65,42 @@ router.post('/fireflies-webhook', async (req, res) => {
       )
       console.log('OpenAI response received:', summaryResponse.data.success)
 
+      let pdfInfo = null
+
+      // Автоматично генеруємо та зберігаємо PDF
+      if (summaryResponse.data.success && summaryResponse.data.summary) {
+        try {
+          console.log('Generating PDF...')
+          const pdfResponse = await axios.post(
+            'http://localhost:3001/api/generate-pdf-save',
+            {
+              summary: summaryResponse.data.summary,
+              client: sessionData.client,
+              date: sessionData.date
+            }
+          )
+
+          if (pdfResponse.data.success) {
+            pdfInfo = {
+              fileName: pdfResponse.data.fileName,
+              downloadUrl: `http://localhost:3001${pdfResponse.data.filePath}`,
+              fileSize: pdfResponse.data.fileSize
+            }
+            console.log('PDF saved:', pdfInfo.fileName)
+          }
+        } catch (pdfError) {
+          console.error('PDF generation error:', pdfError.message)
+        }
+      }
+
       // Відправка результату на n8n
       if (summaryResponse.data.success) {
         const n8nWebhookUrl = process.env.N8N_WEBHOOK_PROD_URL
         if (n8nWebhookUrl) {
           await axios.post(n8nWebhookUrl, {
             ...sessionData,
-            summary: summaryResponse.data.summary
+            summary: summaryResponse.data.summary,
+            pdf: pdfInfo
           })
         }
       }
@@ -79,7 +108,8 @@ router.post('/fireflies-webhook', async (req, res) => {
       res.json({
         success: true,
         message: 'Fireflies webhook processed successfully',
-        summary: summaryResponse.data.summary
+        summary: summaryResponse.data.summary,
+        pdf: pdfInfo
       })
     } catch (apiError) {
       console.error('Error calling OpenAI:', apiError.response?.data || apiError.message)
@@ -104,7 +134,7 @@ router.post('/fireflies-webhook', async (req, res) => {
 // Endpoint для отримання даних від n8n та генерації конспекту
 router.post('/n8n-webhook', async (req, res) => {
   try {
-    const { session, client, date, generatePdf } = req.body
+    const { session, client, date, autoSavePdf = true } = req.body
 
     if (!session) {
       return res.status(400).json({ error: 'Session text is required' })
@@ -122,19 +152,29 @@ router.post('/n8n-webhook', async (req, res) => {
       metadata: summaryResponse.data.metadata
     }
 
-    // Генерація PDF якщо потрібно
-    if (generatePdf) {
-      const pdfResponse = await axios.post(
-        'http://localhost:3001/api/generate-pdf',
-        {
-          summary: summaryResponse.data.summary,
-          client,
-          date
-        },
-        { responseType: 'arraybuffer' }
-      )
+    // Автоматично зберігаємо PDF (за замовчуванням включено)
+    if (autoSavePdf && summaryResponse.data.success) {
+      try {
+        const pdfResponse = await axios.post(
+          'http://localhost:3001/api/generate-pdf-save',
+          {
+            summary: summaryResponse.data.summary,
+            client,
+            date
+          }
+        )
 
-      result.pdf = Buffer.from(pdfResponse.data).toString('base64')
+        if (pdfResponse.data.success) {
+          result.pdf = {
+            fileName: pdfResponse.data.fileName,
+            downloadUrl: `http://localhost:3001${pdfResponse.data.filePath}`,
+            fileSize: pdfResponse.data.fileSize
+          }
+        }
+      } catch (pdfError) {
+        console.error('PDF generation error:', pdfError.message)
+        result.pdfError = pdfError.message
+      }
     }
 
     res.json(result)
