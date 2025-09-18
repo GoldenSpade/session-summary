@@ -33,30 +33,107 @@ router.post('/webhook/fireflies', async (req, res) => {
     // Логируем весь запрос для отладки
     console.log('Received Fireflies webhook body:', JSON.stringify(req.body, null, 2))
 
-    // Проверяем, что данные вообще есть
-    if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(200).json({
-        message: 'Empty webhook received',
-        info: 'Possibly transcription limit reached on Fireflies free plan'
-      })
+    const { meetingId, eventType, transcript, meeting_attendees, title, date, duration } = req.body
+
+    // Если пришел только meetingId, нужно получить данные через API
+    if (meetingId && eventType === 'Transcription completed') {
+      console.log(`Transcription completed for meeting: ${meetingId}`)
+
+      // Для получения полных данных нужно использовать Fireflies API
+      // GraphQL запрос к Fireflies API
+      try {
+        const firefliesApiKey = process.env.FIREFLIES_API_KEY
+
+        const query = `
+          query GetTranscript($meetingId: String!) {
+            transcript(id: $meetingId) {
+              id
+              title
+              date
+              duration
+              sentences {
+                text
+                speaker_name
+              }
+              summary {
+                overview
+                action_items
+              }
+              participants {
+                name
+                email
+              }
+            }
+          }
+        `
+
+        const firefliesResponse = await axios.post(
+          'https://api.fireflies.ai/graphql',
+          {
+            query,
+            variables: { meetingId }
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${firefliesApiKey}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
+        const transcriptData = firefliesResponse.data?.data?.transcript
+
+        if (!transcriptData) {
+          return res.status(200).json({
+            message: 'No transcript found',
+            meetingId,
+            info: 'Meeting may still be processing or transcription limit reached'
+          })
+        }
+
+        // Обработка полученных данных
+        const sessionData = {
+          session: transcriptData.sentences?.map(s => `${s.speaker_name}: ${s.text}`).join('\n') || '',
+          client: transcriptData.participants?.[0]?.name || 'Клієнт',
+          date: transcriptData.date || new Date().toLocaleDateString('uk-UA'),
+          title: transcriptData.title || 'Психологічна сесія',
+          duration: transcriptData.duration,
+          meetingId,
+          timestamp: new Date().toISOString()
+        }
+
+        console.log('Fetched transcript from Fireflies API:', {
+          title: sessionData.title,
+          sessionLength: sessionData.session.length,
+          meetingId
+        })
+
+        // Далее обработка как обычно...
+        req.body = {
+          transcript: sessionData.session,
+          meeting_attendees: transcriptData.participants,
+          title: transcriptData.title,
+          date: transcriptData.date,
+          duration: transcriptData.duration
+        }
+
+        // Продолжаем обработку с полными данными
+      } catch (apiError) {
+        console.error('Error fetching from Fireflies API:', apiError.response?.data || apiError.message)
+        return res.status(200).json({
+          message: 'Failed to fetch transcript from Fireflies API',
+          error: apiError.message,
+          meetingId
+        })
+      }
     }
 
-    // Отримання даних транскрипції
-    const { transcript, meeting_attendees, title, date, duration } = req.body
-
-    console.log('Received Fireflies webhook:', {
-      title,
-      date,
-      duration,
-      hasTranscript: !!transcript
-    })
-
-    // Проверка наличия транскрипции
-    if (!transcript) {
+    // Если данные пришли напрямую (старый формат)
+    if (!transcript && !meetingId) {
       return res.status(200).json({
-        message: 'No transcript in webhook',
-        info: 'Check Fireflies transcription limits or wait for processing to complete',
-        receivedData: { title, date, duration }
+        message: 'No transcript or meetingId in webhook',
+        info: 'Invalid webhook data format',
+        receivedData: req.body
       })
     }
 
