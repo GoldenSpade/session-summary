@@ -8,15 +8,8 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3001
 
-// CORS конфигурация
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Fireflies-Signature']
-}
-
-app.use(cors(corsOptions))
+// CORS конфигурация - разрешаем всё для разработки
+app.use(cors())
 
 // Middleware для обробки JSON
 app.use(express.json({ limit: '50mb' }))

@@ -1,5 +1,6 @@
 import express from 'express'
 import OpenAI from 'openai'
+import axios from 'axios'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -56,6 +57,29 @@ router.post('/generate-summary', async (req, res) => {
 
     const summary = completion.choices[0].message.content
 
+    // Автоматически генерируем PDF
+    let pdfInfo = null
+    try {
+      const pdfResponse = await axios.post(
+        `http://localhost:${process.env.PORT || 3001}/api/generate-pdf-save`,
+        {
+          summary: summary,
+          client,
+          date
+        }
+      )
+
+      if (pdfResponse.data.success) {
+        pdfInfo = {
+          fileName: pdfResponse.data.fileName,
+          filePath: pdfResponse.data.filePath
+        }
+        console.log('PDF automatically generated:', pdfInfo.fileName)
+      }
+    } catch (pdfError) {
+      console.error('Error generating PDF:', pdfError.message)
+    }
+
     res.json({
       success: true,
       summary: summary,
@@ -63,7 +87,8 @@ router.post('/generate-summary', async (req, res) => {
         client,
         date,
         generatedAt: new Date().toISOString()
-      }
+      },
+      pdf: pdfInfo
     })
 
   } catch (error) {
