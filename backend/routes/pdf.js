@@ -481,4 +481,95 @@ router.delete('/delete-pdf/:fileName', (req, res) => {
   }
 })
 
+// API для получения списка PDF файлов
+router.get('/pdf/list', async (req, res) => {
+  try {
+    // Проверяем существование директории
+    if (!fs.existsSync(PDF_STORAGE_DIR)) {
+      return res.json({ success: true, files: [] })
+    }
+
+    // Читаем файлы из директории
+    const files = fs.readdirSync(PDF_STORAGE_DIR)
+      .filter(file => file.endsWith('.pdf'))
+      .map(file => {
+        const filePath = path.join(PDF_STORAGE_DIR, file)
+        const stats = fs.statSync(filePath)
+
+        return {
+          name: file,
+          size: stats.size,
+          sizeFormatted: formatFileSize(stats.size),
+          createdAt: stats.birthtime,
+          modifiedAt: stats.mtime,
+          downloadUrl: `/api/pdf/download/${encodeURIComponent(file)}`
+        }
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) // Сортировка по дате создания (новые сверху)
+
+    res.json({
+      success: true,
+      files,
+      totalFiles: files.length
+    })
+
+  } catch (error) {
+    console.error('Error reading PDF directory:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to read PDF files',
+      details: error.message
+    })
+  }
+})
+
+// API для скачивания PDF файла
+router.get('/pdf/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename
+
+    // Проверка на безопасность - запрещаем выход за пределы директории
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' })
+    }
+
+    // Проверяем, что это PDF файл
+    if (!filename.endsWith('.pdf')) {
+      return res.status(400).json({ error: 'Only PDF files are allowed' })
+    }
+
+    const filePath = path.join(PDF_STORAGE_DIR, filename)
+
+    // Проверяем существование файла
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    // Устанавливаем заголовки для скачивания
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`)
+
+    // Отправляем файл
+    res.sendFile(filePath)
+
+  } catch (error) {
+    console.error('Error downloading PDF:', error)
+    res.status(500).json({
+      error: 'Failed to download file',
+      details: error.message
+    })
+  }
+})
+
+// Функция для форматирования размера файла
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B'
+
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
 export default router
