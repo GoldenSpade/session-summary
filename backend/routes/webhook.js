@@ -17,7 +17,7 @@ function verifyFirefliesSignature(payload, signature, secret) {
 }
 
 // Endpoint для отримання даних від Fireflies
-router.post('/fireflies-webhook', async (req, res) => {
+router.post('/webhook/fireflies', async (req, res) => {
   try {
     const signature = req.headers['x-fireflies-signature']
     const webhookKey = process.env.FIREFLIES_WEBHOOK_KEY
