@@ -1,11 +1,22 @@
 import express from 'express'
 import cors from 'cors'
+import dotenv from 'dotenv'
+
+// Загрузка переменных окружения
+dotenv.config()
 
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 
-// CORS для локального тестування
-app.use(cors())
+// CORS конфигурация
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Fireflies-Signature']
+}
+
+app.use(cors(corsOptions))
 
 // Middleware для обробки JSON
 app.use(express.json({ limit: '50mb' }))
