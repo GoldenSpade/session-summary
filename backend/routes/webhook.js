@@ -30,6 +30,17 @@ router.post('/webhook/fireflies', async (req, res) => {
       }
     }
 
+    // Логируем весь запрос для отладки
+    console.log('Received Fireflies webhook body:', JSON.stringify(req.body, null, 2))
+
+    // Проверяем, что данные вообще есть
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(200).json({
+        message: 'Empty webhook received',
+        info: 'Possibly transcription limit reached on Fireflies free plan'
+      })
+    }
+
     // Отримання даних транскрипції
     const { transcript, meeting_attendees, title, date, duration } = req.body
 
@@ -39,6 +50,15 @@ router.post('/webhook/fireflies', async (req, res) => {
       duration,
       hasTranscript: !!transcript
     })
+
+    // Проверка наличия транскрипции
+    if (!transcript) {
+      return res.status(200).json({
+        message: 'No transcript in webhook',
+        info: 'Check Fireflies transcription limits or wait for processing to complete',
+        receivedData: { title, date, duration }
+      })
+    }
 
     // Підготовка даних для обробки
     const sessionData = {
