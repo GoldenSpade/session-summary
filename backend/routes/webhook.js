@@ -119,6 +119,8 @@ router.post('/webhook/fireflies', async (req, res) => {
           participants: transcriptData.participants
         })
 
+        console.log('Session text first 200 chars:', sessionData.session.substring(0, 200))
+
         // Если есть транскрипция, обрабатываем
         if (sessionData.session && sessionData.session.length > 0) {
           // Вызываем OpenAI для генерации резюме

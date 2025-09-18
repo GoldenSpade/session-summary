@@ -82,7 +82,7 @@ function generateFileName(client, date) {
   // Видаляємо всі спеціальні символи, залишаємо тільки літери, цифри та підкреслення
   const sanitizedClient = transliteratedClient.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')
   const timestamp = new Date().getTime()
-  const formattedDate = date ? date.replace(/\//g, '-').replace(/\./g, '-') : 'no-date'
+  const formattedDate = date ? String(date).replace(/\//g, '-').replace(/\./g, '-') : 'no-date'
   return `konspekt_${sanitizedClient}_${formattedDate}_${timestamp}.pdf`
 }
 
