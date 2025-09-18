@@ -90,8 +90,20 @@ router.post('/webhook/fireflies', async (req, res) => {
         }
 
         // Обработка полученных данных
+        // Очищаем текст от проблемных символов
+        const cleanText = (text) => {
+          if (!text) return ''
+          return text.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ').trim()
+        }
+
+        const sessionText = transcriptData.sentences?.map(s => {
+          const speaker = cleanText(s.speaker_name || 'Speaker')
+          const text = cleanText(s.text || '')
+          return `${speaker}: ${text}`
+        }).join('\n') || ''
+
         const sessionData = {
-          session: transcriptData.sentences?.map(s => `${s.speaker_name}: ${s.text}`).join('\n') || '',
+          session: sessionText,
           client: transcriptData.participants?.[0] || 'Клієнт',
           date: transcriptData.date || new Date().toLocaleDateString('uk-UA'),
           title: transcriptData.title || 'Психологічна сесія',
@@ -107,16 +119,49 @@ router.post('/webhook/fireflies', async (req, res) => {
           participants: transcriptData.participants
         })
 
-        // Далее обработка как обычно...
-        req.body = {
-          transcript: sessionData.session,
-          meeting_attendees: transcriptData.participants?.map(name => ({ name })),
-          title: transcriptData.title,
-          date: transcriptData.date,
-          duration: transcriptData.duration
-        }
+        // Если есть транскрипция, обрабатываем
+        if (sessionData.session && sessionData.session.length > 0) {
+          // Вызываем OpenAI для генерации резюме
+          console.log('Calling OpenAI API with session data...')
+          try {
+            const summaryResponse = await axios.post(
+              `http://localhost:${process.env.PORT || 3001}/api/generate-summary`,
+              {
+                session: sessionData.session,
+                client: sessionData.client,
+                date: sessionData.date
+              }
+            )
 
-        // Продолжаем обработку с полными данными
+            return res.json({
+              success: true,
+              message: 'Transcript processed successfully',
+              meetingId,
+              summary: summaryResponse.data.summary,
+              pdf: summaryResponse.data.pdf,
+              metadata: {
+                title: sessionData.title,
+                duration: sessionData.duration,
+                client: sessionData.client,
+                date: sessionData.date
+              }
+            })
+          } catch (apiError) {
+            console.error('Error calling OpenAI:', apiError.response?.data || apiError.message)
+            return res.status(200).json({
+              success: false,
+              message: 'Failed to generate summary',
+              error: apiError.message,
+              meetingId
+            })
+          }
+        } else {
+          return res.status(200).json({
+            success: false,
+            message: 'No transcript content found',
+            meetingId
+          })
+        }
       } catch (apiError) {
         console.error('Error fetching from Fireflies API:', apiError.response?.data || apiError.message)
         return res.status(200).json({
