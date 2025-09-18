@@ -59,10 +59,8 @@ router.post('/webhook/fireflies', async (req, res) => {
                 overview
                 action_items
               }
-              participants {
-                name
-                email
-              }
+              participants
+              organizer_email
             }
           }
         `
@@ -94,7 +92,7 @@ router.post('/webhook/fireflies', async (req, res) => {
         // Обработка полученных данных
         const sessionData = {
           session: transcriptData.sentences?.map(s => `${s.speaker_name}: ${s.text}`).join('\n') || '',
-          client: transcriptData.participants?.[0]?.name || 'Клієнт',
+          client: transcriptData.participants?.[0] || 'Клієнт',
           date: transcriptData.date || new Date().toLocaleDateString('uk-UA'),
           title: transcriptData.title || 'Психологічна сесія',
           duration: transcriptData.duration,
@@ -105,13 +103,14 @@ router.post('/webhook/fireflies', async (req, res) => {
         console.log('Fetched transcript from Fireflies API:', {
           title: sessionData.title,
           sessionLength: sessionData.session.length,
-          meetingId
+          meetingId,
+          participants: transcriptData.participants
         })
 
         // Далее обработка как обычно...
         req.body = {
           transcript: sessionData.session,
-          meeting_attendees: transcriptData.participants,
+          meeting_attendees: transcriptData.participants?.map(name => ({ name })),
           title: transcriptData.title,
           date: transcriptData.date,
           duration: transcriptData.duration
