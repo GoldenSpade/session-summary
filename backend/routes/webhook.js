@@ -105,7 +105,7 @@ router.post('/webhook/fireflies', async (req, res) => {
         const sessionData = {
           session: sessionText,
           client: transcriptData.participants?.[0] || 'Клієнт',
-          date: transcriptData.date || new Date().toLocaleDateString('uk-UA'),
+          date: transcriptData.date ? new Date(transcriptData.date).toLocaleDateString('uk-UA') : new Date().toLocaleDateString('uk-UA'),
           title: transcriptData.title || 'Психологічна сесія',
           duration: transcriptData.duration,
           meetingId,
@@ -125,14 +125,21 @@ router.post('/webhook/fireflies', async (req, res) => {
         if (sessionData.session && sessionData.session.length > 0) {
           // Вызываем OpenAI для генерации резюме
           console.log('Calling OpenAI API with session data...')
+          const requestData = {
+            session: sessionData.session,
+            client: sessionData.client,
+            date: sessionData.date
+          }
+          console.log('Request data:', {
+            sessionLength: requestData.session?.length || 0,
+            client: requestData.client,
+            date: requestData.date
+          })
+
           try {
             const summaryResponse = await axios.post(
               `http://localhost:${process.env.PORT || 3001}/api/generate-summary`,
-              {
-                session: sessionData.session,
-                client: sessionData.client,
-                date: sessionData.date
-              }
+              requestData
             )
 
             return res.json({
