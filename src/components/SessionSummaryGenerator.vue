@@ -6,83 +6,6 @@
         Генератор Конспектів Психологічних Сесій
       </h1>
 
-      <div class="card shadow">
-        <div class="card-body">
-          <!-- Форма вводу даних -->
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="client" class="form-label">Ім'я клієнта:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="client"
-                v-model="formData.client"
-                placeholder="Введіть ім'я клієнта"
-              />
-            </div>
-            <div class="col-md-6">
-              <label for="date" class="form-label">Дата сесії:</label>
-              <input
-                type="date"
-                class="form-control"
-                id="date"
-                v-model="formData.date"
-              />
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="session" class="form-label">Опис сесії:</label>
-            <textarea
-              class="form-control"
-              id="session"
-              rows="6"
-              v-model="formData.session"
-              placeholder="Опишіть деталі психологічної сесії..."
-            ></textarea>
-          </div>
-
-          <!-- Кнопки дій -->
-          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <button
-              class="btn btn-primary btn-lg"
-              @click="generateSummary"
-              :disabled="loading || !formData.session"
-            >
-              <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-              <i v-else class="bi bi-file-text me-2"></i>
-              {{ loading ? 'Генерую...' : 'Згенерувати Конспект' }}
-            </button>
-
-            <button
-              v-if="summary"
-              class="btn btn-success btn-lg"
-              @click="downloadPDF"
-              :disabled="loadingPdf"
-            >
-              <span v-if="loadingPdf" class="spinner-border spinner-border-sm me-2"></span>
-              <i v-else class="bi bi-file-pdf me-2"></i>
-              {{ loadingPdf ? 'Створюю PDF...' : 'Завантажити PDF' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Результат -->
-      <div v-if="summary" class="card mt-4 shadow">
-        <div class="card-header bg-success text-white">
-          <i class="bi bi-check-circle me-2"></i>
-          Конспект успішно згенеровано
-        </div>
-        <div class="card-body">
-          <pre class="summary-text">{{ summary }}</pre>
-          <div class="text-muted small mt-3">
-            <i class="bi bi-clock me-1"></i>
-            Згенеровано: {{ generatedAt }}
-          </div>
-        </div>
-      </div>
-
       <!-- Повідомлення про помилку -->
       <div v-if="error" class="alert alert-danger mt-4" role="alert">
         <i class="bi bi-exclamation-triangle me-2"></i>
@@ -96,15 +19,27 @@
             <i class="bi bi-folder me-2"></i>
             Згенеровані Конспекти ({{ pdfFiles.length }})
           </div>
-          <button
-            class="btn btn-light btn-sm"
-            @click="refreshFileList"
-            :disabled="loadingFiles"
-          >
-            <span v-if="loadingFiles" class="spinner-border spinner-border-sm me-1"></span>
-            <i v-else class="bi bi-arrow-repeat me-1"></i>
-            Оновити
-          </button>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-warning btn-sm"
+              @click="testGeneration"
+              :disabled="loading || loadingPdf"
+              title="Тестувати генерацію"
+            >
+              <span v-if="loading || loadingPdf" class="spinner-border spinner-border-sm me-1"></span>
+              <i v-else class="bi bi-play-circle me-1"></i>
+              Тест
+            </button>
+            <button
+              class="btn btn-light btn-sm"
+              @click="refreshFileList"
+              :disabled="loadingFiles"
+            >
+              <span v-if="loadingFiles" class="spinner-border spinner-border-sm me-1"></span>
+              <i v-else class="bi bi-arrow-repeat me-1"></i>
+              Оновити
+            </button>
+          </div>
         </div>
         <div class="card-body">
           <div v-if="loadingFiles" class="text-center py-4">
@@ -175,100 +110,80 @@ const formData = reactive({
   session: ''
 })
 
-const summary = ref('')
 const loading = ref(false)
 const loadingPdf = ref(false)
 const error = ref('')
-const generatedAt = ref('')
 
 // Файлы PDF
 const pdfFiles = ref([])
 const loadingFiles = ref(false)
 
-// Приклад тексту для демо
-const sampleText = `Клієнт розповідав про постійний стрес на роботі через конфлікти з керівництвом. Відчуває тривогу, має проблеми зі сном - прокидається о 3-4 ранку і не може заснути. Говорив про бажання змінити роботу, але боїться невизначеності. Також згадував про напружені стосунки з дружиною через його постійну дратівливість.`
+// Тестові дані
+const testData = {
+  client: 'Іван Петренко',
+  date: new Date().toISOString().split('T')[0],
+  session: `Клієнт розповідав про постійний стрес на роботі через конфлікти з керівництвом. Відчуває тривогу, має проблеми зі сном - прокидається о 3-4 ранку і не може заснути. Говорив про бажання змінити роботу, але боїться невизначеності. Також згадував про напружені стосунки з дружиною через його постійну дратівливість.`
+}
 
 onMounted(() => {
-  // Встановлюємо приклад для демо
-  formData.session = sampleText
-  formData.client = 'Іван Петренко'
-
   // Загружаем список файлов
   refreshFileList()
 })
 
-const generateSummary = async () => {
-  if (!formData.session.trim()) {
-    error.value = 'Будь ласка, введіть опис сесії'
-    return
-  }
-
+// Функція тестування - генерує конспект та PDF
+const testGeneration = async () => {
   loading.value = true
   error.value = ''
-  summary.value = ''
 
   try {
-    const response = await axios.post(`${API_URL}/generate-summary`, {
-      session: formData.session,
-      client: formData.client,
-      date: formData.date
+    // Генеруємо конспект
+    const summaryResponse = await axios.post(`${API_URL}/generate-summary`, {
+      session: testData.session,
+      client: testData.client,
+      date: testData.date
     })
 
-    if (response.data.success) {
-      summary.value = response.data.summary
-      generatedAt.value = new Date(response.data.metadata.generatedAt).toLocaleString('uk-UA')
-
-      // Автоматически обновляем список файлов после генерации (если PDF создался)
-      if (response.data.pdf) {
-        setTimeout(() => {
-          refreshFileList()
-        }, 1000) // Небольшая задержка для завершения записи файла
-      }
-    } else {
-      error.value = response.data.error || 'Помилка при генерації конспекту'
+    if (!summaryResponse.data.success) {
+      error.value = summaryResponse.data.error || 'Помилка при генерації конспекту'
+      return
     }
-  } catch (err) {
-    console.error('Error:', err)
-    error.value = err.response?.data?.details || err.message || 'Помилка з\'єднання з сервером'
-  } finally {
-    loading.value = false
-  }
-}
 
-const downloadPDF = async () => {
-  if (!summary.value) {
-    error.value = 'Спочатку згенеруйте конспект'
-    return
-  }
+    const generatedSummary = summaryResponse.data.summary
 
-  loadingPdf.value = true
-  error.value = ''
+    // Створюємо PDF
+    loadingPdf.value = true
 
-  try {
-    const response = await axios.post(
+    const pdfResponse = await axios.post(
       `${API_URL}/generate-pdf`,
       {
-        summary: summary.value,
-        client: formData.client,
-        date: formData.date
+        summary: generatedSummary,
+        client: testData.client,
+        date: testData.date
       },
       {
         responseType: 'blob'
       }
     )
 
-    // Створюємо посилання для завантаження
-    const blob = new Blob([response.data], { type: 'application/pdf' })
+    // Автоматично завантажуємо PDF
+    const blob = new Blob([pdfResponse.data], { type: 'application/pdf' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `konspekt_${formData.date || 'session'}.pdf`
+    link.download = `konspekt_${testData.client}_${testData.date}.pdf`
     link.click()
     window.URL.revokeObjectURL(url)
+
+    // Оновлюємо список файлів
+    setTimeout(() => {
+      refreshFileList()
+    }, 1000)
+
   } catch (err) {
-    console.error('PDF Error:', err)
-    error.value = 'Помилка при створенні PDF'
+    console.error('Test Error:', err)
+    error.value = err.response?.data?.details || err.message || 'Помилка тестування'
   } finally {
+    loading.value = false
     loadingPdf.value = false
   }
 }
