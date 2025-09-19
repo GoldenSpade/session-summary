@@ -151,7 +151,7 @@ router.post('/generate-pdf-save', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('Основні теми', 120, currentY)
+         .text('Основні теми', 100, currentY)
       currentY += 20
 
       sections.topics.forEach(topic => {
@@ -159,7 +159,7 @@ router.post('/generate-pdf-save', async (req, res) => {
         doc.font('Montserrat')
            .fontSize(10)
            .fillColor('#333')
-           .text('• ' + cleanTopic, 130, currentY, { width: 345, lineGap: 2 })
+           .text('• ' + cleanTopic, 110, currentY, { width: 365, lineGap: 2 })
         currentY = doc.y + 6
       })
       currentY += 8
@@ -170,7 +170,7 @@ router.post('/generate-pdf-save', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('Ключові інсайти', 120, currentY)
+         .text('Ключові інсайти', 100, currentY)
       currentY += 20
 
       sections.insights.forEach(insight => {
@@ -178,7 +178,7 @@ router.post('/generate-pdf-save', async (req, res) => {
         doc.font('Montserrat')
            .fontSize(10)
            .fillColor('#333')
-           .text('• ' + cleanInsight, 130, currentY, { width: 345, lineGap: 2 })
+           .text('• ' + cleanInsight, 110, currentY, { width: 365, lineGap: 2 })
         currentY = doc.y + 6
       })
       currentY += 8
@@ -189,7 +189,7 @@ router.post('/generate-pdf-save', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('План дій', 120, currentY)
+         .text('План дій', 100, currentY)
       currentY += 20
 
       sections.actions.forEach(action => {
@@ -199,11 +199,14 @@ router.post('/generate-pdf-save', async (req, res) => {
           const boldPart = cleanAction.substring(0, colonIndex)
           const regularPart = cleanAction.substring(colonIndex)
 
-          doc.text('• ', 130, currentY, { continued: true })
+          // Рисуем буллет отдельно
+          doc.font('Montserrat').fontSize(10).fillColor('#333')
+             .text('• ', 110, currentY, { continued: true })
           doc.font('Montserrat-Bold').fontSize(10).text(boldPart, { continued: true })
-          doc.font('Montserrat').fontSize(10).text(regularPart, { width: 335, lineGap: 2 })
+          doc.font('Montserrat').fontSize(10).text(regularPart, { width: 355, lineGap: 2 })
         } else {
-          doc.font('Montserrat').fontSize(10).text('• ' + cleanAction, 130, currentY, { width: 345, lineGap: 2 })
+          doc.font('Montserrat').fontSize(10).fillColor('#333')
+             .text('• ' + cleanAction, 110, currentY, { width: 365, lineGap: 2 })
         }
         currentY = doc.y + 6
       })
@@ -303,7 +306,7 @@ router.post('/generate-pdf', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('Основні теми', 120, currentY)
+         .text('Основні теми', 100, currentY)
       currentY += 20
 
       sections.topics.forEach(topic => {
@@ -312,7 +315,7 @@ router.post('/generate-pdf', async (req, res) => {
         doc.font('Montserrat')
            .fontSize(10)
            .fillColor('#333')
-           .text('• ' + cleanTopic, 130, currentY, { width: 345, lineGap: 2 })
+           .text('• ' + cleanTopic, 110, currentY, { width: 365, lineGap: 2 })
         currentY = doc.y + 6
       })
       currentY += 8
@@ -323,7 +326,7 @@ router.post('/generate-pdf', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('Ключові інсайти', 120, currentY)
+         .text('Ключові інсайти', 100, currentY)
       currentY += 20
 
       sections.insights.forEach(insight => {
@@ -332,7 +335,7 @@ router.post('/generate-pdf', async (req, res) => {
         doc.font('Montserrat')
            .fontSize(10)
            .fillColor('#333')
-           .text('• ' + cleanInsight, 130, currentY, { width: 345, lineGap: 2 })
+           .text('• ' + cleanInsight, 110, currentY, { width: 365, lineGap: 2 })
         currentY = doc.y + 6
       })
       currentY += 8
@@ -343,7 +346,7 @@ router.post('/generate-pdf', async (req, res) => {
       doc.font('Montserrat-Bold')
          .fontSize(14)
          .fillColor('#4b2384')
-         .text('План дій', 120, currentY)
+         .text('План дій', 100, currentY)
       currentY += 20
 
       sections.actions.forEach(action => {
@@ -356,11 +359,14 @@ router.post('/generate-pdf', async (req, res) => {
           const boldPart = cleanAction.substring(0, colonIndex)
           const regularPart = cleanAction.substring(colonIndex)
 
-          doc.text('• ', 130, currentY, { continued: true })
+          // Рисуем буллет отдельно
+          doc.font('Montserrat').fontSize(10).fillColor('#333')
+             .text('• ', 110, currentY, { continued: true })
           doc.font('Montserrat-Bold').fontSize(10).text(boldPart, { continued: true })
-          doc.font('Montserrat').fontSize(10).text(regularPart, { width: 335, lineGap: 2 })
+          doc.font('Montserrat').fontSize(10).text(regularPart, { width: 355, lineGap: 2 })
         } else {
-          doc.font('Montserrat').fontSize(10).text('• ' + cleanAction, 130, currentY, { width: 345, lineGap: 2 })
+          doc.font('Montserrat').fontSize(10).fillColor('#333')
+             .text('• ' + cleanAction, 110, currentY, { width: 365, lineGap: 2 })
         }
         currentY = doc.y + 6
       })
