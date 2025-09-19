@@ -209,8 +209,9 @@ router.post('/webhook/fireflies', async (req, res) => {
     // Генерація конспекту через OpenAI
     try {
       console.log('Calling OpenAI API...')
+      const apiUrl = process.env.API_URL || 'http://localhost:3001/api'
       const summaryResponse = await axios.post(
-        'http://localhost:3001/api/generate-summary',
+        `${apiUrl}/generate-summary`,
         sessionData
       )
       console.log('OpenAI response received:', summaryResponse.data.success)
@@ -221,8 +222,9 @@ router.post('/webhook/fireflies', async (req, res) => {
       if (summaryResponse.data.success && summaryResponse.data.summary) {
         try {
           console.log('Generating PDF...')
+          const apiUrl = process.env.API_URL || 'http://localhost:3001/api'
           const pdfResponse = await axios.post(
-            'http://localhost:3001/api/generate-pdf-save',
+            `${apiUrl}/generate-pdf-save`,
             {
               summary: summaryResponse.data.summary,
               client: sessionData.client,

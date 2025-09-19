@@ -60,8 +60,9 @@ router.post('/generate-summary', async (req, res) => {
     // Автоматически генерируем PDF
     let pdfInfo = null
     try {
+      const apiUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}/api`
       const pdfResponse = await axios.post(
-        `http://localhost:${process.env.PORT || 3001}/api/generate-pdf-save`,
+        `${apiUrl}/generate-pdf-save`,
         {
           summary: summary,
           client,
