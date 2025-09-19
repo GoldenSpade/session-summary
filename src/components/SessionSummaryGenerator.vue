@@ -3,7 +3,7 @@
     <div class="container mt-5">
       <h1 class="text-center mb-4">
         <i class="bi bi-journal-medical"></i>
-        Генератор Конспектів Психологічних Сесій
+        Конспекти Психологічних Сесій
       </h1>
 
       <!-- Повідомлення про помилку -->
@@ -80,13 +80,23 @@
                     <span class="badge bg-secondary">{{ file.sizeFormatted }}</span>
                   </td>
                   <td>
-                    <button
-                      class="btn btn-primary btn-sm"
-                      @click="downloadFile(file)"
-                      title="Скачати файл"
-                    >
-                      <i class="bi bi-download"></i>
-                    </button>
+                    <div class="d-flex gap-1">
+                      <button
+                        class="btn btn-primary btn-sm"
+                        @click="downloadFile(file)"
+                        title="Скачати файл"
+                      >
+                        <i class="bi bi-download"></i>
+                      </button>
+                      <button
+                        class="btn btn-danger btn-sm"
+                        @click="deleteFile(file)"
+                        title="Видалити файл"
+                        :disabled="loadingFiles"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -229,6 +239,26 @@ const getDisplayName = (filename) => {
     .replace(/^konspekt_/, '')
     .replace(/_\d+\.pdf$/, '.pdf')
     .replace(/_/g, ' ')
+}
+
+const deleteFile = async (file) => {
+  if (!confirm(`Ви впевнені, що хочете видалити файл "${getDisplayName(file.name)}"?`)) {
+    return
+  }
+
+  try {
+    const response = await axios.delete(`${API_URL}/pdf/delete/${encodeURIComponent(file.name)}`)
+
+    if (response.data.success) {
+      // Обновляем список файлов после удаления
+      refreshFileList()
+    } else {
+      error.value = 'Помилка при видаленні файлу'
+    }
+  } catch (err) {
+    console.error('Delete error:', err)
+    error.value = err.response?.data?.error || 'Помилка при видаленні файлу'
+  }
 }
 
 const formatDate = (dateString) => {

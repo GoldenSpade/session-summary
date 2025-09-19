@@ -567,6 +567,45 @@ router.get('/pdf/download/:filename', (req, res) => {
   }
 })
 
+// Endpoint для удаления PDF файла
+router.delete('/pdf/delete/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params
+
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' })
+    }
+
+    // Проверяем что это PDF файл
+    if (!filename.endsWith('.pdf')) {
+      return res.status(400).json({ error: 'Only PDF files can be deleted' })
+    }
+
+    const filePath = path.join(PDF_STORAGE_DIR, filename)
+
+    // Проверяем существование файла
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    // Удаляем файл
+    fs.unlinkSync(filePath)
+
+    res.json({
+      success: true,
+      message: 'File deleted successfully',
+      filename: filename
+    })
+
+  } catch (error) {
+    console.error('Error deleting PDF:', error)
+    res.status(500).json({
+      error: 'Failed to delete file',
+      details: error.message
+    })
+  }
+})
+
 // Функция для форматирования размера файла
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 B'
