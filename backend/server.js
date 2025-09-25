@@ -22,7 +22,8 @@ app.get('/api', (req, res) => {
     endpoints: {
       generateSummary: 'POST /api/generate-summary',
       generatePdf: 'POST /api/generate-pdf',
-      webhookFireflies: 'POST /api/webhook/fireflies'
+      webhookFireflies: 'POST /api/webhook/fireflies',
+      vapiTest: 'POST /api/vapi/test'
     }
   })
 })
@@ -31,11 +32,13 @@ app.get('/api', (req, res) => {
 import webhookRoutes from './routes/webhook.js'
 import openaiRoutes from './routes/openai.js'
 import pdfRoutes from './routes/pdf.js'
+import vapiRoutes from './routes/vapi.js'
 
 // Підключення роутів
 app.use('/api', webhookRoutes)
 app.use('/api', openaiRoutes)
 app.use('/api', pdfRoutes)
+app.use('/api', vapiRoutes)
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
